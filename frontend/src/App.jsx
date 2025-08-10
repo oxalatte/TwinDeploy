@@ -177,15 +177,22 @@ export default function App(){
 
   // Remote directory browsing
   async function browseRemoteDir(path = '/') {
-    if (!targetId || connectionStatus !== 'connected') return;
+    console.log('browseRemoteDir called with path:', path, 'targetId:', targetId, 'connectionStatus:', connectionStatus);
+    if (!targetId || connectionStatus !== 'connected') {
+      console.log('Cannot browse: no target or not connected');
+      return;
+    }
     setRemoteBusy(true);
     try {
       const result = await listRemoteDir(targetId, path);
+      console.log('Remote dir result:', result);
       if (result.items) {
         setRemoteItems(result.items);
         setRemotePath(path);
+        console.log('Set remote path to:', path, 'items count:', result.items.length);
       }
     } catch (error) {
+      console.error('Remote browsing error:', error);
       setLog(l => [...l, `Remote browsing error: ${error.message || 'Failed to browse'}`]);
     } finally {
       setRemoteBusy(false);
@@ -199,8 +206,14 @@ export default function App(){
   }
 
   function handleRemoteParentDir() {
-    if (remotePath === '/') return;
-    const parentPath = remotePath.split('/').slice(0, -1).join('/') || '/';
+    console.log('handleRemoteParentDir called, current remotePath:', remotePath);
+    if (remotePath === '/') {
+      console.log('Already at root, cannot go up');
+      return;
+    }
+    const pathParts = remotePath.split('/').filter(part => part !== '');
+    const parentPath = pathParts.length <= 1 ? '/' : '/' + pathParts.slice(0, -1).join('/');
+    console.log('Navigating to parent path:', parentPath);
     browseRemoteDir(parentPath);
   }
 
@@ -611,57 +624,51 @@ export default function App(){
                   <div className="empty">Connect to server to browse files</div>
                 ) : (
                   <>
-                    {remoteItems.length === 0 && remotePath === '/' ? (
+                    {/* Add parent directory (..) entry if not at root */}
+                    {remotePath !== '/' && (
+                      <div
+                        key=".."
+                        className="remote-item folder parent-dir"
+                        onClick={handleRemoteParentDir}
+                      >
+                        <div className="remote-icon">📁</div>
+                        <div className="remote-name">..</div>
+                        <div className="remote-size"></div>
+                      </div>
+                    )}
+
+                    {/* Regular directory and file items */}
+                    {remoteItems.length === 0 ? (
                       <div className="empty">Empty directory</div>
                     ) : (
-                      <>
-                        {/* Add parent directory (..) entry if not at root */}
-                        {remotePath !== '/' && (
-                          <div
-                            key=".."
-                            className="remote-item folder parent-dir"
-                            onClick={handleRemoteParentDir}
-                          >
-                            <div className="remote-icon">📁</div>
-                            <div className="remote-name">..</div>
-                            <div className="remote-size"></div>
-                          </div>
-                        )}
-
-                        {/* Regular directory and file items */}
-                        {remoteItems.length === 0 ? (
-                          <div className="empty">Empty directory</div>
-                        ) : (
-                          remoteItems.map(item => (
-                            <div
-                              key={item.path}
-                              className={`remote-item ${item.type === 'd' ? 'folder' : 'file'}`}
-                            >
-                              <div className="remote-icon">{item.type === 'd' ? '📁' : '📄'}</div>
-                              <div className="remote-name" onClick={() => handleNavigateRemote(item)}>{item.name}</div>
-                              <div className="remote-size">{item.type !== 'd' ? formatFileSize(item.size) : ''}</div>
-                              {item.type !== 'd' && (
-                                <div className="remote-actions">
-                                  <button
-                                    className="btn sm"
-                                    onClick={(e) => { e.stopPropagation(); handleDownloadFile(item); }}
-                                    title="Download file"
-                                  >
-                                    ⬇️
-                                  </button>
-                                  <button
-                                    className="btn sm"
-                                    onClick={(e) => { e.stopPropagation(); handleEditFile(item); }}
-                                    title="Edit file"
-                                  >
-                                    ✏️
-                                  </button>
-                                </div>
-                              )}
+                      remoteItems.map(item => (
+                        <div
+                          key={item.path}
+                          className={`remote-item ${item.type === 'd' ? 'folder' : 'file'}`}
+                        >
+                          <div className="remote-icon">{item.type === 'd' ? '📁' : '📄'}</div>
+                          <div className="remote-name" onClick={() => handleNavigateRemote(item)}>{item.name}</div>
+                          <div className="remote-size">{item.type !== 'd' ? formatFileSize(item.size) : ''}</div>
+                          {item.type !== 'd' && (
+                            <div className="remote-actions">
+                              <button
+                                className="btn sm"
+                                onClick={(e) => { e.stopPropagation(); handleDownloadFile(item); }}
+                                title="Download file"
+                              >
+                                ⬇️
+                              </button>
+                              <button
+                                className="btn sm"
+                                onClick={(e) => { e.stopPropagation(); handleEditFile(item); }}
+                                title="Edit file"
+                              >
+                                ✏️
+                              </button>
                             </div>
-                          ))
-                        )}
-                      </>
+                          )}
+                        </div>
+                      ))
                     )}
                   </>
                 )}
