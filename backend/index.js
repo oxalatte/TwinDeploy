@@ -396,6 +396,12 @@ app.post('/api/targets/:id/upload', async (req, res) => {
   try {
     if (connection.protocol === 'sftp') {
       try {
+        // Create directory if it doesn't exist
+        const dir = path.posix.dirname(filePath);
+        if (dir && dir !== '/') {
+          await connection.client.mkdir(dir, true); // recursive directory creation
+        }
+
         const buffer = Buffer.from(content, 'utf8');
         await connection.client.put(buffer, filePath);
         res.json({ ok: true });
@@ -409,6 +415,12 @@ app.post('/api/targets/:id/upload', async (req, res) => {
 
       try {
         await fs.writeFile(tempPath, content, 'utf8');
+
+        // Create directory if it doesn't exist
+        const dir = path.posix.dirname(filePath);
+        if (dir && dir !== '/') {
+          await connection.client.ensureDir(dir); // recursive directory creation
+        }
 
         // Use a Promise wrapper for the FTP upload operation
         await new Promise((resolve, reject) => {
@@ -428,9 +440,7 @@ app.post('/api/targets/:id/upload', async (req, res) => {
         } catch (unlinkError) {
           console.warn('Failed to clean up temp file:', unlinkError.message);
         }
-      }
-
-    } else {
+      }    } else {
       res.status(400).json({ error: 'Unsupported protocol' });
     }
   } catch (error) {
