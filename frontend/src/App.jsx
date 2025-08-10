@@ -62,6 +62,15 @@ export default function App(){
   const [editingFile, setEditingFile] = useState(null); // { path, content, originalContent }
   const [showFileEditor, setShowFileEditor] = useState(false);
 
+  // Deployment progress state
+  const [deploymentActive, setDeploymentActive] = useState(false);
+  const [deploymentProgress, setDeploymentProgress] = useState({
+    total: 0,
+    completed: [],
+    current: null,
+    failed: []
+  });
+
   useEffect(()=>{ document.body.classList.toggle('dark', dark); },[dark]);
   useEffect(()=>{ listTargets().then(setTargets); listManifests().then(setManifests); },[]);
 
@@ -299,6 +308,15 @@ export default function App(){
       deploymentRoot = selectedTarget.remoteRoot;
     }
 
+    // Initialize deployment progress tracking
+    setDeploymentActive(true);
+    setDeploymentProgress({
+      total: selectedFiles.length,
+      completed: [],
+      current: null,
+      failed: []
+    });
+
     const res = await fetch('/api/deploy',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -310,21 +328,35 @@ export default function App(){
       })
     });
     const es = new EventSourcePoly(res);
-    es.on('start', d=> setLog(l=>[...l, `Start: ${d.total} files → ${d.target} (${deploymentRoot})`]));
-    es.on('progress', d=> setLog(l=>[...l, `Uploaded ${d.index}/${d.total}: ${d.file}`]));
-    es.on('error', d=> setLog(l=>[...l, `Error: ${d.error}`]));
-    es.on('done', d=> { setLog(l=>[...l, 'Done']); es.close(); listManifests().then(setManifests); });
-  }
-
-  async function replay(){
-    const id = prompt('Manifest ID to replay (see History list)'); if(!id) return;
-    const target = prompt('Replay target id (copy from Targets list)'); if(!target) return;
-    const res = await fetch('/api/replay',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ manifestId:id, targetId:target }) });
-    const es = new EventSourcePoly(res);
-    es.on('start', d=> setLog(l=>[...l, `Replay start: ${d.total} files → ${d.target}`]));
-    es.on('progress', d=> setLog(l=>[...l, `Uploaded ${d.index}/${d.total}: ${d.file}`]));
-    es.on('error', d=> setLog(l=>[...l, `Error: ${d.error}`]));
-    es.on('done', d=> { setLog(l=>[...l, 'Replay done']); es.close(); });
+    es.on('start', d=> {
+      setLog(l=>[...l, `Start: ${d.total} files → ${d.target} (${deploymentRoot})`]);
+    });
+    es.on('progress', d=> {
+      setLog(l=>[...l, `Uploaded ${d.index}/${d.total}: ${d.file}`]);
+      setDeploymentProgress(prev => ({
+        ...prev,
+        completed: [...prev.completed, d.file],
+        current: d.index < d.total ? selectedFiles[d.index] : null
+      }));
+    });
+    es.on('error', d=> {
+      setLog(l=>[...l, `Error: ${d.error}`]);
+      setDeploymentProgress(prev => ({
+        ...prev,
+        failed: [...prev.failed, prev.current || 'Unknown file']
+      }));
+      setDeploymentActive(false);
+    });
+    es.on('done', d=> {
+      setLog(l=>[...l, 'Done']);
+      es.close();
+      listManifests().then(setManifests);
+      setDeploymentActive(false);
+      // Clear progress after a short delay to let user see completion
+      setTimeout(() => {
+        setDeploymentProgress({ total: 0, completed: [], current: null, failed: [] });
+      }, 3000);
+    });
   }
 
 
@@ -373,48 +405,117 @@ export default function App(){
         </section>
 
         <section className="panel wide">
-          <h3>File Queue <span className="badge">{selectedFiles.length}</span></h3>
-          {selectedFiles.length > 0 && targetId && (
-            <div className="file-queue">
-              <div className="queue-header">
-                <div>Source Path</div>
-                <div></div>
-                <div>Destination Path</div>
+          <h3>File Queue & Deployment Progress <span className="badge">{selectedFiles.length}</span></h3>
+
+          {/* Deployment Progress Display (only shown during deployment) */}
+          {deploymentActive && (
+            <div className="deployment-status">
+              <div className="deployment-header">
+                <h4>Deploying {deploymentProgress.total} files...</h4>
+                <div className="progress-summary">
+                  {deploymentProgress.completed.length} completed, {deploymentProgress.failed.length} failed
+                </div>
               </div>
-              {selectedFiles.map(path => {
-                const selectedTarget = targets.find(t => t.id === targetId);
+            </div>
+          )}
 
-                // Use the current remote browser path as the destination root
-                // If remote browser is not active, fall back to target's remoteRoot
-                let destinationRoot = remotePath || '/';
-                if (!showRemoteBrowser && selectedTarget?.remoteRoot && selectedTarget.remoteRoot.trim()) {
-                  destinationRoot = selectedTarget.remoteRoot;
-                }
-
-                // Construct the full destination path
-                const relativePath = destinationRoot === '/' ?
-                  `/${path}` :
-                  `${destinationRoot.replace(/\/+$/, '')}/${path}`;
-
-                // Include host information in the full path display
-                const hostPrefix = selectedTarget ? `${selectedTarget.host}:` : '';
-                const fullDestPath = `${hostPrefix}${relativePath}`;
-
-                return (
-                  <div key={path} className="queue-item">
-                    <div className="source-path mono" title={`${repoPath}/${path}`}>{path}</div>
-                    <div className="arrow">→</div>
-                    <div className="dest-path mono" title={fullDestPath}>{fullDestPath}</div>
+          <div className={`queue-container ${deploymentActive ? 'deployment-active' : ''}`}>
+            {/* File Queue */}
+            <div className="queue-section">
+              <h4>Queue {deploymentActive ? '(Pending)' : ''}</h4>
+              {selectedFiles.length > 0 && targetId ? (
+                <div className="file-queue">
+                  <div className="queue-header">
+                    <div>Source Path</div>
+                    <div></div>
+                    <div>Destination Path</div>
                   </div>
-                );
-              })}
+                  {selectedFiles.map(path => {
+                    const selectedTarget = targets.find(t => t.id === targetId);
+                    let destinationRoot = remotePath || '/';
+                    if (!showRemoteBrowser && selectedTarget?.remoteRoot && selectedTarget.remoteRoot.trim()) {
+                      destinationRoot = selectedTarget.remoteRoot;
+                    }
+                    const relativePath = destinationRoot === '/' ?
+                      `/${path}` :
+                      `${destinationRoot.replace(/\/+$/, '')}/${path}`;
+                    const hostPrefix = selectedTarget ? `${selectedTarget.host}:` : '';
+                    const fullDestPath = `${hostPrefix}${relativePath}`;
+
+                    // Determine status for styling
+                    const isCompleted = deploymentProgress.completed.includes(path);
+                    const isFailed = deploymentProgress.failed.includes(path);
+                    const isCurrent = deploymentProgress.current === path;
+
+                    return (
+                      <div key={path} className={`queue-item ${isCompleted ? 'completed' : ''} ${isFailed ? 'failed' : ''} ${isCurrent ? 'current' : ''}`}>
+                        <div className="source-path mono" title={`${repoPath}/${path}`}>
+                          {path}
+                          {isCompleted && <span className="status-icon">✅</span>}
+                          {isFailed && <span className="status-icon">❌</span>}
+                          {isCurrent && <span className="status-icon">⏳</span>}
+                        </div>
+                        <div className="arrow">→</div>
+                        <div className="dest-path mono" title={fullDestPath}>{fullDestPath}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="empty">
+                  {selectedFiles.length === 0 ? 'No files selected.' : 'Select a target to see destination paths.'}
+                </div>
+              )}
             </div>
-          )}
-          {(selectedFiles.length === 0 || !targetId) && (
-            <div className="empty">
-              {selectedFiles.length === 0 ? 'No files selected.' : 'Select a target to see destination paths.'}
-            </div>
-          )}
+
+            {/* Deployment Progress (only shown during deployment) */}
+            {deploymentActive && (
+              <div className="progress-section">
+                <h4>Transfer Progress</h4>
+
+                {/* Completed Files */}
+                {deploymentProgress.completed.length > 0 && (
+                  <div className="progress-group completed">
+                    <h5>✅ Completed ({deploymentProgress.completed.length})</h5>
+                    <div className="progress-list">
+                      {deploymentProgress.completed.map(file => (
+                        <div key={file} className="progress-item completed">
+                          <span className="progress-file mono">{file}</span>
+                          <span className="progress-status">✅</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Current File */}
+                {deploymentProgress.current && (
+                  <div className="progress-group current">
+                    <h5>⏳ Transferring</h5>
+                    <div className="progress-item current">
+                      <span className="progress-file mono">{deploymentProgress.current}</span>
+                      <span className="progress-status">⏳</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Failed Files */}
+                {deploymentProgress.failed.length > 0 && (
+                  <div className="progress-group failed">
+                    <h5>❌ Failed ({deploymentProgress.failed.length})</h5>
+                    <div className="progress-list">
+                      {deploymentProgress.failed.map(file => (
+                        <div key={file} className="progress-item failed">
+                          <span className="progress-file mono">{file}</span>
+                          <span className="progress-status">❌</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </section>
 
         <section className="panel">
@@ -461,7 +562,7 @@ export default function App(){
         </section>
 
         <section className="panel">
-          <h3>4) Remote Browser</h3>
+          <h3>4) Choose Remote Repository root path</h3>
           <div className="row tight">
             <button className="btn" onClick={toggleRemoteBrowser} disabled={!targetId}>{showRemoteBrowser ? 'Hide Browser' : 'Browse Remote'}</button>
             {targetId && (
@@ -487,9 +588,23 @@ export default function App(){
           {showRemoteBrowser && (
             <div className="remote-browser">
               <div className="remote-path-bar">
-                <button className="btn sm" onClick={handleRemoteParentDir} disabled={remotePath === '/' || remoteBusy || connectionStatus !== 'connected'}>Parent Dir</button>
+                <button
+                  className="btn sm"
+                  onClick={handleRemoteParentDir}
+                  disabled={remotePath === '/' || remoteBusy || connectionStatus !== 'connected'}
+                  title="Go to parent directory"
+                >
+                  ⬆️ Up
+                </button>
                 <div className="current-path mono">{remotePath}</div>
-                <button className="btn sm" onClick={() => browseRemoteDir(remotePath)} disabled={remoteBusy || connectionStatus !== 'connected'}>Refresh</button>
+                <button
+                  className="btn sm"
+                  onClick={() => browseRemoteDir(remotePath)}
+                  disabled={remoteBusy || connectionStatus !== 'connected'}
+                  title="Refresh current directory"
+                >
+                  🔄 Refresh
+                </button>
               </div>
               <div className="remote-items">
                 {remoteBusy ? (
@@ -498,37 +613,57 @@ export default function App(){
                   <div className="empty">Connect to server to browse files</div>
                 ) : (
                   <>
-                    {remoteItems.length === 0 ? (
+                    {remoteItems.length === 0 && remotePath === '/' ? (
                       <div className="empty">Empty directory</div>
                     ) : (
-                      remoteItems.map(item => (
-                        <div
-                          key={item.path}
-                          className={`remote-item ${item.type === 'd' ? 'folder' : 'file'}`}
-                        >
-                          <div className="remote-icon">{item.type === 'd' ? '📁' : '📄'}</div>
-                          <div className="remote-name" onClick={() => handleNavigateRemote(item)}>{item.name}</div>
-                          <div className="remote-size">{item.type !== 'd' ? formatFileSize(item.size) : ''}</div>
-                          {item.type !== 'd' && (
-                            <div className="remote-actions">
-                              <button
-                                className="btn sm"
-                                onClick={(e) => { e.stopPropagation(); handleDownloadFile(item); }}
-                                title="Download file"
-                              >
-                                ⬇️
-                              </button>
-                              <button
-                                className="btn sm"
-                                onClick={(e) => { e.stopPropagation(); handleEditFile(item); }}
-                                title="Edit file"
-                              >
-                                ✏️
-                              </button>
+                      <>
+                        {/* Add parent directory (..) entry if not at root */}
+                        {remotePath !== '/' && (
+                          <div
+                            key=".."
+                            className="remote-item folder parent-dir"
+                            onClick={handleRemoteParentDir}
+                          >
+                            <div className="remote-icon">📁</div>
+                            <div className="remote-name">..</div>
+                            <div className="remote-size"></div>
+                          </div>
+                        )}
+
+                        {/* Regular directory and file items */}
+                        {remoteItems.length === 0 ? (
+                          <div className="empty">Empty directory</div>
+                        ) : (
+                          remoteItems.map(item => (
+                            <div
+                              key={item.path}
+                              className={`remote-item ${item.type === 'd' ? 'folder' : 'file'}`}
+                            >
+                              <div className="remote-icon">{item.type === 'd' ? '📁' : '📄'}</div>
+                              <div className="remote-name" onClick={() => handleNavigateRemote(item)}>{item.name}</div>
+                              <div className="remote-size">{item.type !== 'd' ? formatFileSize(item.size) : ''}</div>
+                              {item.type !== 'd' && (
+                                <div className="remote-actions">
+                                  <button
+                                    className="btn sm"
+                                    onClick={(e) => { e.stopPropagation(); handleDownloadFile(item); }}
+                                    title="Download file"
+                                  >
+                                    ⬇️
+                                  </button>
+                                  <button
+                                    className="btn sm"
+                                    onClick={(e) => { e.stopPropagation(); handleEditFile(item); }}
+                                    title="Edit file"
+                                  >
+                                    ✏️
+                                  </button>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      ))
+                          ))
+                        )}
+                      </>
                     )}
                   </>
                 )}
@@ -538,10 +673,15 @@ export default function App(){
         </section>
 
         <section className="panel">
-          <h3>5) Deploy & Replay</h3>
+          <h3>5) Deploy</h3>
           <div className="row wrap">
-            <button className="btn primary" onClick={deploy} disabled={!targetId||selectedFiles.length===0}>Deploy selected</button>
-            <button className="btn" onClick={replay}>Replay manifest</button>
+            <button
+              className="btn primary"
+              onClick={deploy}
+              disabled={!targetId||selectedFiles.length===0}
+            >
+              Deploy {selectedFiles.length > 0 ? `${selectedFiles.length} file${selectedFiles.length === 1 ? '' : 's'}` : 'selected'}
+            </button>
           </div>
         </section>
 
