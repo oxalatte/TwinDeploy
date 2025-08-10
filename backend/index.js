@@ -4,7 +4,7 @@ import { v4 as uuid } from 'uuid';
 import { listChanged, listStaged, getRepoRoot } from './git.js';
 import { getTargets, saveTargets, addManifest, getManifests } from './store.js';
 import { uploadWithSFTP, uploadWithFTPS } from './deploy.js';
-import fs from 'fs';
+import fs from 'fs/promises';
 import path from 'path';
 
 const app = express();
@@ -96,7 +96,7 @@ app.post('/api/replay', async (req,res)=>{
     // Use the stored deployment root from the manifest, fall back to target's remoteRoot
     const effectiveRemoteRoot = m.deploymentRoot || target.remoteRoot || '/';
     const targetWithEffectiveRoot = { ...target, remoteRoot: effectiveRemoteRoot };
-    
+
     if (target.protocol === 'sftp') {
       await uploadWithSFTP(targetWithEffectiveRoot, m.repoRoot, m.files, (p)=>write('progress', p));
     } else if (target.protocol === 'ftps') {
@@ -309,6 +309,132 @@ app.get('/api/targets/:id/browse', async (req, res) => {
 
     res.json({ items });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Download file endpoint
+app.get('/api/targets/:id/download', async (req, res) => {
+  const { id } = req.params;
+  const { path: filePath } = req.query;
+
+  if (!filePath) {
+    return res.status(400).json({ error: 'File path is required' });
+  }
+
+  const connection = activeConnections.get(id);
+  if (!connection) {
+    return res.status(400).json({ error: 'Not connected. Connect first.' });
+  }
+
+  try {
+    if (connection.protocol === 'sftp') {
+      try {
+        const buffer = await connection.client.get(filePath);
+        const filename = path.basename(filePath);
+
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.send(buffer);
+      } catch (sftpError) {
+        console.error('SFTP download error:', sftpError);
+        throw sftpError;
+      }
+
+    } else if (connection.protocol === 'ftps') {
+      const tempPath = path.join('/tmp', `download_${Date.now()}_${path.basename(filePath)}`);
+
+      try {
+        // Use a Promise wrapper for the FTP download operation
+        await new Promise((resolve, reject) => {
+          connection.client.downloadTo(tempPath, filePath)
+            .then(resolve)
+            .catch(reject);
+        });
+
+        const buffer = await fs.readFile(tempPath);
+
+        const filename = path.basename(filePath);
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.send(buffer);
+      } catch (ftpError) {
+        console.error('FTP download error:', ftpError);
+        throw ftpError;
+      } finally {
+        // Always clean up temp file
+        try {
+          await fs.unlink(tempPath);
+        } catch (unlinkError) {
+          console.warn('Failed to clean up temp file:', unlinkError.message);
+        }
+      }
+
+    } else {
+      res.status(400).json({ error: 'Unsupported protocol' });
+    }
+  } catch (error) {
+    console.error('Download error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Upload file endpoint
+app.post('/api/targets/:id/upload', async (req, res) => {
+  const { id } = req.params;
+  const { path: filePath, content } = req.body;
+
+  if (!filePath || content === undefined) {
+    return res.status(400).json({ error: 'File path and content are required' });
+  }
+
+  const connection = activeConnections.get(id);
+  if (!connection) {
+    return res.status(400).json({ error: 'Not connected. Connect first.' });
+  }
+
+  try {
+    if (connection.protocol === 'sftp') {
+      try {
+        const buffer = Buffer.from(content, 'utf8');
+        await connection.client.put(buffer, filePath);
+        res.json({ ok: true });
+      } catch (sftpError) {
+        console.error('SFTP upload error:', sftpError);
+        throw sftpError;
+      }
+
+    } else if (connection.protocol === 'ftps') {
+      const tempPath = path.join('/tmp', `upload_${Date.now()}_${path.basename(filePath)}`);
+
+      try {
+        await fs.writeFile(tempPath, content, 'utf8');
+
+        // Use a Promise wrapper for the FTP upload operation
+        await new Promise((resolve, reject) => {
+          connection.client.uploadFrom(tempPath, filePath)
+            .then(resolve)
+            .catch(reject);
+        });
+
+        res.json({ ok: true });
+      } catch (ftpError) {
+        console.error('FTP upload error:', ftpError);
+        throw ftpError;
+      } finally {
+        // Always clean up temp file
+        try {
+          await fs.unlink(tempPath);
+        } catch (unlinkError) {
+          console.warn('Failed to clean up temp file:', unlinkError.message);
+        }
+      }
+
+    } else {
+      res.status(400).json({ error: 'Unsupported protocol' });
+    }
+  } catch (error) {
+    console.error('Upload error:', error);
     res.status(500).json({ error: error.message });
   }
 });

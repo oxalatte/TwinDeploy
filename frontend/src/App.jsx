@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { getChanged, getStaged, listTargets, addTarget, updateTarget, deleteTarget, startDeploy, startReplay, listManifests, listRemoteDir, testTarget, connectTarget, disconnectTarget, getConnectionStatus } from './api';
+import { getChanged, getStaged, listTargets, addTarget, updateTarget, deleteTarget, startDeploy, startReplay, listManifests, listRemoteDir, testTarget, connectTarget, disconnectTarget, getConnectionStatus, downloadFile, uploadFile } from './api';
 
 // Helper to read SSE from a fetch Response (Safari-friendly)
 class EventSourcePoly {
@@ -57,6 +57,10 @@ export default function App(){
   const [remoteBusy, setRemoteBusy] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('disconnected'); // 'connected', 'disconnected', 'connecting', 'disconnecting'
   const [connectionError, setConnectionError] = useState('');
+
+  // File editor state
+  const [editingFile, setEditingFile] = useState(null); // { path, content, originalContent }
+  const [showFileEditor, setShowFileEditor] = useState(false);
 
   useEffect(()=>{ document.body.classList.toggle('dark', dark); },[dark]);
   useEffect(()=>{ listTargets().then(setTargets); listManifests().then(setManifests); },[]);
@@ -201,6 +205,85 @@ export default function App(){
     } else {
       setShowRemoteBrowser(false);
     }
+  }
+
+  // File operations
+  async function handleDownloadFile(item) {
+    if (!targetId || connectionStatus !== 'connected') return;
+    try {
+      setLog(l => [...l, `Downloading ${item.name}...`]);
+      const response = await downloadFile(targetId, item.path);
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = item.name;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        setLog(l => [...l, `Downloaded ${item.name} successfully`]);
+      } else {
+        const error = await response.json();
+        setLog(l => [...l, `Download failed: ${error.error || 'Unknown error'}`]);
+      }
+    } catch (error) {
+      setLog(l => [...l, `Download error: ${error.message}`]);
+    }
+  }
+
+  async function handleEditFile(item) {
+    if (!targetId || connectionStatus !== 'connected') return;
+    try {
+      setLog(l => [...l, `Opening ${item.name} for editing...`]);
+      const response = await downloadFile(targetId, item.path);
+
+      if (response.ok) {
+        const content = await response.text();
+        setEditingFile({
+          path: item.path,
+          name: item.name,
+          content: content,
+          originalContent: content
+        });
+        setShowFileEditor(true);
+        setLog(l => [...l, `Opened ${item.name} in editor`]);
+      } else {
+        const error = await response.json();
+        setLog(l => [...l, `Failed to open file: ${error.error || 'Unknown error'}`]);
+      }
+    } catch (error) {
+      setLog(l => [...l, `Edit error: ${error.message}`]);
+    }
+  }
+
+  async function handleSaveFile() {
+    if (!editingFile || !targetId) return;
+    try {
+      setLog(l => [...l, `Saving ${editingFile.name}...`]);
+      const result = await uploadFile(targetId, editingFile.path, editingFile.content);
+
+      if (result.ok) {
+        setLog(l => [...l, `Saved ${editingFile.name} successfully`]);
+        setEditingFile({ ...editingFile, originalContent: editingFile.content });
+      } else {
+        setLog(l => [...l, `Save failed: ${result.error || 'Unknown error'}`]);
+      }
+    } catch (error) {
+      setLog(l => [...l, `Save error: ${error.message}`]);
+    }
+  }
+
+  function handleCloseEditor() {
+    if (editingFile && editingFile.content !== editingFile.originalContent) {
+      if (!confirm('You have unsaved changes. Are you sure you want to close?')) {
+        return;
+      }
+    }
+    setEditingFile(null);
+    setShowFileEditor(false);
   }
   async function handleDelete(id){ if(!confirm('Delete this target?')) return; await deleteTarget(id); setTargets(ts=>ts.filter(t=>t.id!==id)); if(targetId===id) setTargetId(''); if(editing===id){ setEditing(null); setTForm(emptyTarget); } }
 
@@ -422,11 +505,28 @@ export default function App(){
                         <div
                           key={item.path}
                           className={`remote-item ${item.type === 'd' ? 'folder' : 'file'}`}
-                          onClick={() => handleNavigateRemote(item)}
                         >
                           <div className="remote-icon">{item.type === 'd' ? '📁' : '📄'}</div>
-                          <div className="remote-name">{item.name}</div>
+                          <div className="remote-name" onClick={() => handleNavigateRemote(item)}>{item.name}</div>
                           <div className="remote-size">{item.type !== 'd' ? formatFileSize(item.size) : ''}</div>
+                          {item.type !== 'd' && (
+                            <div className="remote-actions">
+                              <button
+                                className="btn sm"
+                                onClick={(e) => { e.stopPropagation(); handleDownloadFile(item); }}
+                                title="Download file"
+                              >
+                                ⬇️
+                              </button>
+                              <button
+                                className="btn sm"
+                                onClick={(e) => { e.stopPropagation(); handleEditFile(item); }}
+                                title="Edit file"
+                              >
+                                ✏️
+                              </button>
+                            </div>
+                          )}
                         </div>
                       ))
                     )}
@@ -471,6 +571,44 @@ export default function App(){
           </div>
         </section>
       </div>
+
+      {/* File Editor Modal */}
+      {showFileEditor && editingFile && (
+        <div className="modal-overlay" onClick={handleCloseEditor}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Edit File: {editingFile.name}</h3>
+              <button className="btn sm" onClick={handleCloseEditor}>✕</button>
+            </div>
+            <div className="modal-body">
+              <textarea
+                value={editingFile.content}
+                onChange={(e) => setEditingFile({ ...editingFile, content: e.target.value })}
+                className="file-editor"
+                spellCheck={false}
+              />
+            </div>
+            <div className="modal-footer">
+              <div className="file-path mono">{editingFile.path}</div>
+              <div className="modal-actions">
+                <button
+                  className="btn"
+                  onClick={handleCloseEditor}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn primary"
+                  onClick={handleSaveFile}
+                  disabled={editingFile.content === editingFile.originalContent}
+                >
+                  Save {editingFile.content !== editingFile.originalContent ? '*' : ''}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
