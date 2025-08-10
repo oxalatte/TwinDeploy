@@ -17,6 +17,45 @@ A small **local web app** that detects **changed or staged Git files**, lets you
 
 ---
 
+## Upcoming Features
+
+### 🚀 High Priority
+
+* [ ] **Local Repository Browser**: Browse local repository files/folders and manually add them to deployment queue (beyond just Git changes)
+* [ ] **File Conflict Resolution**: Handle overwrites with backup options and conflict detection
+* [ ] **Batch Operations**: Select and deploy multiple file sets with different targets
+* [ ] **Deployment Templates**: Save common deployment configurations for quick reuse
+* [ ] **Progress Persistence**: Resume interrupted deployments from where they left off
+
+### 🎯 Medium Priority
+
+* [ ] **Advanced File Filtering**: Exclude patterns, file size limits, and content-based filters
+* [ ] **Target Health Check**: Verify connectivity and permissions before deployment
+* [ ] **Deployment Scheduling**: Queue deployments and run them at specified times
+* [ ] **File Comparison**: Visual diff between local and remote files before deployment
+
+### 💡 Future Enhancements
+
+* [ ] **Multi-Repository Support**: Manage deployments across multiple Git repositories
+* [ ] **Team Collaboration**: Share deployment configurations and history with team members
+* [ ] **Notification System**: Email/Slack notifications for deployment completion/failures
+* [ ] **Rollback Capability**: One-click rollback to previous deployment states
+* [ ] **Docker Integration**: Deploy to containerized environments
+* [ ] **CI/CD Pipeline Integration**: Webhook triggers from GitHub/GitLab actions
+
+### 🔧 Technical Improvements
+
+* [ ] **Database Migration**: Move from JSON storage to SQLite for better performance
+* [ ] **Authentication System**: User accounts and role-based access control
+* [ ] **API Rate Limiting**: Prevent abuse and improve stability
+* [ ] **Unit Tests**: Comprehensive test coverage for backend and frontend
+* [ ] **Performance Optimization**: Parallel transfers and connection pooling
+* [ ] **Error Recovery**: Automatic retry logic for failed transfers
+
+> **Contributing**: Feel free to suggest new features by opening an issue or submitting a PR. Features marked with 🚀 are actively being considered for the next release.
+
+---
+
 ## Project layout
 
 ```
@@ -89,32 +128,38 @@ PORT=9547
 
 When adding a new target, you'll need:
 
-- **Name**: A friendly name (e.g., "dev", "staging")
-- **Protocol**: Either "sftp" or "ftps"
-- **Host**: Server hostname or IP
-- **User**: Username for authentication
-- **Remote Root**: Base directory on the remote server
-- **Private Key**: Path to SSH key (for SFTP) or leave blank for password
-- **Password**: Password authentication (if not using key)
+* **Name**: A friendly name (e.g., "dev", "staging")
+* **Protocol**: Either "sftp" or "ftps"
+* **Host**: Server hostname or IP
+* **User**: Username for authentication
+* **Remote Root**: Base directory on the remote server
+* **Private Key**: Path to SSH key (for SFTP) or leave blank for password
+* **Password**: Password authentication (if not using key)
 
 ---
 
 ## API Endpoints
 
 ### Repository
-- `GET /api/repo/changed?repoPath=...&baseRef=...` - Get changed files
-- `GET /api/repo/staged?repoPath=...` - Get staged files
+
+* `GET /api/repo/changed?repoPath=...&baseRef=...` - Get changed files
+
+* `GET /api/repo/staged?repoPath=...` - Get staged files
 
 ### Targets
-- `GET /api/targets` - List all targets
-- `POST /api/targets` - Create new target
-- `PUT /api/targets/:id` - Update target
-- `DELETE /api/targets/:id` - Delete target
+
+* `GET /api/targets` - List all targets
+
+* `POST /api/targets` - Create new target
+* `PUT /api/targets/:id` - Update target
+* `DELETE /api/targets/:id` - Delete target
 
 ### Deployment
-- `POST /api/deploy` - Deploy files (returns SSE stream)
-- `POST /api/replay` - Replay manifest (returns SSE stream)
-- `GET /api/manifests` - List deployment history
+
+* `POST /api/deploy` - Deploy files (returns SSE stream)
+
+* `POST /api/replay` - Replay manifest (returns SSE stream)
+* `GET /api/manifests` - List deployment history
 
 ---
 
@@ -130,7 +175,7 @@ npm run dev
 # Backend only
 cd backend && npm run dev
 
-# Frontend only  
+# Frontend only
 cd frontend && npm run dev
 ```
 
@@ -140,10 +185,10 @@ The frontend will be available at `http://localhost:5173` and will proxy API req
 
 ## Security Notes
 
-- This app runs locally and is intended for development use
-- SSH keys and passwords are stored in local JSON files
-- Ensure your deployment targets are properly secured
-- Consider using SSH key authentication instead of passwords when possible
+* This app runs locally and is intended for development use
+* SSH keys and passwords are stored in local JSON files
+* Ensure your deployment targets are properly secured
+* Consider using SSH key authentication instead of passwords when possible
 
 ---
 
