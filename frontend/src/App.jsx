@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { getChanged, getStaged, listTargets, addTarget, updateTarget, deleteTarget, startDeploy, startReplay, listManifests, listRemoteDir, testTarget, connectTarget, disconnectTarget, getConnectionStatus, downloadFile, uploadFile } from './api';
+import { getChanged, getStaged, listTargets, addTarget, updateTarget, deleteTarget, startDeploy, listRemoteDir, testTarget, connectTarget, disconnectTarget, getConnectionStatus, downloadFile, uploadFile } from './api';
 
 // Helper to read SSE from a fetch Response (Safari-friendly)
 class EventSourcePoly {
@@ -46,7 +46,6 @@ export default function App(){
   const [sel,setSel] = useState({});
   const [targets,setTargets] = useState([]);
   const [targetId,setTargetId] = useState('');
-  const [manifests,setManifests] = useState([]);
   const [log,setLog] = useState([]);
   const [dark,setDark] = useState(false);
 
@@ -72,7 +71,7 @@ export default function App(){
   });
 
   useEffect(()=>{ document.body.classList.toggle('dark', dark); },[dark]);
-  useEffect(()=>{ listTargets().then(setTargets); listManifests().then(setManifests); },[]);
+  useEffect(()=>{ listTargets().then(setTargets); },[]);
 
   const selectedFiles = useMemo(()=> Object.keys(sel).filter(k=>sel[k]),[sel]);
 
@@ -350,7 +349,6 @@ export default function App(){
     es.on('done', d=> {
       setLog(l=>[...l, 'Done']);
       es.close();
-      listManifests().then(setManifests);
       setDeploymentActive(false);
       // Clear progress after a short delay to let user see completion
       setTimeout(() => {
@@ -685,24 +683,8 @@ export default function App(){
           </div>
         </section>
 
-        <section className="panel">
-          <h3>6) History</h3>
-          <div className="list compact">
-            {manifests.slice(0,10).map(m=> (
-              <div key={m.id} className="manifest-item">
-                <div className="row space">
-                  <strong>{m.id.slice(0,8)}</strong>
-                  <span>{new Date(m.createdAt).toLocaleString()}</span>
-                </div>
-                <div className="files-small mono">{m.files.slice(0,4).join(', ')}{m.files.length>4?' …':''}</div>
-              </div>
-            ))}
-            {manifests.length===0 && <div className="empty">No deployments yet.</div>}
-          </div>
-        </section>
-
         <section className="panel wide">
-          <h3>7) Log</h3>
+          <h3>6) Log</h3>
           <div className="log">
             {log.slice(-40).map((msg,i)=> <div key={i}>{msg}</div>)}
           </div>
