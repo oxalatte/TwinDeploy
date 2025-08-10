@@ -134,8 +134,10 @@ export default function App(){
       if (result.ok) {
         setConnectionStatus('connected');
         setLog(l => [...l, `Connected to ${targets.find(t => t.id === targetId)?.host || 'server'}`]);
-        // After connecting, refresh the directory listing
-        browseRemoteDir('/');
+        // After connecting, automatically show remote browser and browse root directory
+        setShowRemoteBrowser(true);
+        // Force browse even if connectionStatus hasn't updated yet
+        browseRemoteDir('/', true);
       } else {
         setConnectionStatus('disconnected');
         setConnectionError(result.error || 'Failed to connect');
@@ -155,9 +157,11 @@ export default function App(){
       await disconnectTarget(targetId);
       setConnectionStatus('disconnected');
       setRemoteItems([]);
+      setShowRemoteBrowser(false);
       setLog(l => [...l, `Disconnected from ${targets.find(t => t.id === targetId)?.host || 'server'}`]);
     } catch (error) {
       setConnectionStatus('disconnected'); // Force to disconnected state even if there was an error
+      setShowRemoteBrowser(false);
       setLog(l => [...l, `Disconnect error: ${error.message || 'Unknown error'}`]);
     }
   }
@@ -167,18 +171,30 @@ export default function App(){
     if (targetId) {
       getConnectionStatus(targetId)
         .then(result => {
-          setConnectionStatus(result.connected ? 'connected' : 'disconnected');
+          const isConnected = result.connected;
+          setConnectionStatus(isConnected ? 'connected' : 'disconnected');
+          if (isConnected) {
+            // If already connected, automatically show remote browser and browse
+            setShowRemoteBrowser(true);
+            browseRemoteDir('/', true);
+          } else {
+            setShowRemoteBrowser(false);
+          }
         })
-        .catch(() => setConnectionStatus('disconnected'));
+        .catch(() => {
+          setConnectionStatus('disconnected');
+          setShowRemoteBrowser(false);
+        });
     } else {
       setConnectionStatus('disconnected');
+      setShowRemoteBrowser(false);
     }
   }, [targetId]);
 
   // Remote directory browsing
-  async function browseRemoteDir(path = '/') {
-    console.log('browseRemoteDir called with path:', path, 'targetId:', targetId, 'connectionStatus:', connectionStatus);
-    if (!targetId || connectionStatus !== 'connected') {
+  async function browseRemoteDir(path = '/', forceConnect = false) {
+    console.log('browseRemoteDir called with path:', path, 'targetId:', targetId, 'connectionStatus:', connectionStatus, 'forceConnect:', forceConnect);
+    if (!targetId || (!forceConnect && connectionStatus !== 'connected')) {
       console.log('Cannot browse: no target or not connected');
       return;
     }
