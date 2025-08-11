@@ -6,11 +6,20 @@ import { getTargets, saveTargets, addManifest, getManifests } from './store.js';
 import { uploadWithSFTP, uploadWithFTPS } from './deploy.js';
 import fs from 'fs/promises';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const PORT = Number(process.env.PORT) || 9547;
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
-const PORT = Number(process.env.PORT) || 9547;
+
+// Serve frontend static files
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // Health
 app.get('/api/health', (req,res)=>res.json({ ok:true }));
@@ -447,6 +456,11 @@ app.post('/api/targets/:id/upload', async (req, res) => {
     console.error('Upload error:', error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// Fallback: serve index.html for SPA
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
 // Clean up connections on server close

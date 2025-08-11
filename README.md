@@ -84,6 +84,28 @@ TwinDeploy/
 
 ---
 
+## Docker
+
+Build the Docker image:
+
+```bash
+docker build -t twindeploy .
+```
+
+Run the Docker container:
+
+```bash
+docker run --name twindeploy -p 9547:9547 twindeploy
+```
+
+Run the Docker container in detached mode:
+
+```bash
+docker run -d --name twindeploy -p 9547:9547 twindeploy
+```
+
+> Note: The container serves both the API and static frontend on port **9547**. Open <http://localhost:9547> to access the app (no separate 5173 port required).
+
 ## Quick start
 
 ```bash

@@ -391,11 +391,11 @@ export default function App(){
   return (
     <div className="wrap">
       <header className="app-header">
+        <img src="/app_logo.png" alt="TwinDeploy logo" className="app-logo" />
         <h1>TwinDeploy</h1>
-        <p>Selective Git file deployment & replay</p>
+        <p>Selective Git file deployment & replay to other targets</p>
         <div className="header-actions">
           <button className="btn" onClick={()=>setDark(d=>!d)}>{dark?'Light':'Dark'} mode</button>
-          <a className="repo-link" href="https://github.com" target="_blank">Docs</a>
         </div>
       </header>
 
