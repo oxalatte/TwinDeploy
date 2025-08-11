@@ -467,10 +467,7 @@ body.dark .file-item:hover { background:rgba(255,255,255,0.05); }
 }
 
 /* Remote file actions */
-.remote-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.remote-actions {
   display: flex;
   gap: 4px;
   opacity: 0;
