@@ -1,234 +1,209 @@
-# TwinDeploy (Web, runs locally)
+# TwinDeploy 🚀
 
-A small **local web app** that detects **changed or staged Git files**, lets you **choose exactly which files to deploy**, uploads them to **SFTP/FTPS targets**, and can **replay the exact same batch** to another target (e.g., *dev → qa*) — all from your browser.
+> A local web app for selective Git file deployment to SFTP/FTPS targets
 
-> Stack: **Node.js (Express)** backend + **React (Vite)** frontend. Git via `simple-git`. SFTP via `ssh2-sftp-client`. FTPS via `basic-ftp`. Progress updates via Server-Sent Events (SSE).
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-16%2B-green.svg)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
 
----
+**TwinDeploy** is a small **local web app** that detects **changed or staged Git files**, lets you **choose exactly which files to deploy**, uploads them to **SFTP/FTPS targets**, and can **replay the exact same batch** to another target (e.g., *dev → qa → production*) — all from your browser.
 
-## Features
+## 📸 Screenshot
 
-* Detect **changed since base ref** (e.g., `main`, a tag, or a commit) **or** only **staged** files
-* Checkbox UI to select files you actually want to deploy
-* **Profiles**: add/edit SFTP/FTPS targets (host, user, key/password, remote root)
-* **Deploy** selected files to a target
-* **Replay** the same manifest to another target later
-* **History** with timestamps, sizes, and results
+![TwinDeploy Interface](docs/TwinDeploy_screenshot.png)
 
----
+**Figure 1:** TwinDeploy's intuitive interface showing the complete deployment workflow from Git file detection to SFTP/FTPS deployment
 
-## Upcoming Features
+## ✨ Key Features
+
+- 🔍 **Smart Git Detection**: Find changed files since any commit/branch or only staged files
+- ✅ **Selective Deployment**: Checkbox interface to choose exactly which files to deploy
+- 🎯 **Multiple Targets**: Manage SFTP/FTPS servers with profiles (dev, staging, production)
+- 🔄 **Deployment Replay**: Deploy the same file set to different targets instantly
+- 📊 **Real-time Progress**: Live deployment progress with Server-Sent Events
+- 📁 **Remote Browser**: Browse and edit files directly on remote servers
+- 📝 **Deployment History**: Track all deployments with timestamps and results
+- 🌙 **Dark Mode**: Modern interface with light/dark theme support
+
+## 🛠 Tech Stack
+
+- **Backend**: Node.js + Express + Server-Sent Events
+- **Frontend**: React + Vite
+- **Git Integration**: `simple-git`
+- **File Transfer**: `ssh2-sftp-client` (SFTP) + `basic-ftp` (FTPS)
+- **Storage**: JSON files (SQLite migration planned)
+
+## 🚀 Quick Start
+
+```bash
+# 1) Clone and install dependencies
+git clone git@github.com:ShirleyKyeyune/TwinDeploy.git
+cd TwinDeploy
+npm install
+
+# 2) Install backend dependencies
+cd backend && npm install
+
+# 3) Install frontend dependencies
+cd ../frontend && npm install
+
+# 4) Start development servers
+cd .. && npm run dev
+
+# Open http://localhost:5173 in your browser
+```
+
+> 💡 **Note**: TwinDeploy doesn't move or clone your repositories. You point it at existing local Git repos and it reads diffs and streams files during deployment.
+
+## 📖 How It Works
+
+### 1. **Setup Targets**
+
+Configure your deployment targets (dev, staging, production) with SFTP/FTPS credentials.
+
+### 2. **Choose Repository**
+
+Point to your local Git repository and select the remote deployment path.
+
+### 3. **Scan for Changes**
+
+- **Changed since**: Compare against any branch/commit/tag
+- **Staged files**: Deploy only staged changes
+
+### 4. **Select Files**
+
+Use the checkbox interface to choose exactly which files to deploy.
+
+### 5. **Deploy & Track**
+
+Watch real-time progress as files are uploaded to your target server.
+
+### 6. **Replay Deployments**
+
+Instantly deploy the same file set to different targets (dev → staging → production).
+
+## 🔧 Configuration
+
+### Environment Variables (Optional)
+
+Create `backend/.env`:
+
+```bash
+PORT=9547                    # Backend port (default: 9547)
+DATA_DIR=./data             # Storage directory (default: backend/.data)
+```
+
+### Target Configuration
+
+Each target includes:
+
+- **Name**: Friendly identifier
+- **Protocol**: SFTP or FTPS
+- **Host**: Server hostname/IP
+- **Port**: Connection port (22 for SFTP, 21 for FTPS)
+- **Credentials**: Username/password or SSH key
+- **Remote Root**: Base deployment directory
+
+## 📁 Project Structure
+
+```text
+TwinDeploy/
+├── backend/                 # Node.js Express API
+│   ├── index.js            # Main server + API routes
+│   ├── deploy.js           # SFTP/FTPS upload logic
+│   ├── git.js              # Git file detection
+│   ├── store.js            # JSON data persistence
+│   └── .data/              # Storage (auto-created)
+├── frontend/               # React Vite frontend
+│   ├── src/
+│   │   ├── App.jsx         # Main application
+│   │   ├── api.js          # API client functions
+│   │   └── styles.css      # UI styling
+│   └── dist/               # Built files (auto-created)
+├── docs/                   # Documentation assets
+│   └── TwinDeploy_screenshot.png      # Application screenshot
+└── package.json            # Root scripts
+```
+
+## 🛣 Roadmap
 
 ### 🚀 High Priority
 
-* [ ] **Local Repository Browser**: Browse local repository files/folders and manually add them to deployment queue (beyond just Git changes)
-* [ ] **File Conflict Resolution**: Handle overwrites with backup options and conflict detection
-* [ ] **Batch Operations**: Select and deploy multiple file sets with different targets
-* [ ] **Deployment Templates**: Save common deployment configurations for quick reuse
-* [ ] **Progress Persistence**: Resume interrupted deployments from where they left off
+- [ ] **Local Repository Browser**: Browse and manually select files beyond Git changes
+- [ ] **File Conflict Resolution**: Handle overwrites with backup options
+- [ ] **Deployment Templates**: Save common deployment configurations
+- [ ] **Progress Persistence**: Resume interrupted deployments
 
 ### 🎯 Medium Priority
 
-* [ ] **Advanced File Filtering**: Exclude patterns, file size limits, and content-based filters
-* [ ] **Target Health Check**: Verify connectivity and permissions before deployment
-* [ ] **Deployment Scheduling**: Queue deployments and run them at specified times
-* [ ] **File Comparison**: Visual diff between local and remote files before deployment
+- [ ] **Advanced File Filtering**: Exclude patterns and content-based filters
+- [ ] **Target Health Check**: Verify connectivity before deployment
+- [ ] **Deployment Scheduling**: Queue and time-based deployments
+- [ ] **File Comparison**: Visual diff between local and remote files
 
 ### 💡 Future Enhancements
 
-* [ ] **Multi-Repository Support**: Manage deployments across multiple Git repositories
-* [ ] **Team Collaboration**: Share deployment configurations and history with team members
-* [ ] **Notification System**: Email/Slack notifications for deployment completion/failures
-* [ ] **Rollback Capability**: One-click rollback to previous deployment states
-* [ ] **Docker Integration**: Deploy to containerized environments
-* [ ] **CI/CD Pipeline Integration**: Webhook triggers from GitHub/GitLab actions
+- [ ] **Multi-Repository Support**: Manage multiple Git repositories
+- [ ] **Team Collaboration**: Share configurations and deployment history
+- [ ] **CI/CD Integration**: Webhook triggers from GitHub/GitLab
+- [ ] **Docker Support**: Containerized deployment targets
 
-### 🔧 Technical Improvements
-
-* [ ] **Database Migration**: Move from JSON storage to SQLite for better performance
-* [ ] **Authentication System**: User accounts and role-based access control
-* [ ] **API Rate Limiting**: Prevent abuse and improve stability
-* [ ] **Unit Tests**: Comprehensive test coverage for backend and frontend
-* [ ] **Performance Optimization**: Parallel transfers and connection pooling
-* [ ] **Error Recovery**: Automatic retry logic for failed transfers
-
-> **Contributing**: Feel free to suggest new features by opening an issue or submitting a PR. Features marked with 🚀 are actively being considered for the next release.
-
----
-
-## Project layout
-
-```
-TwinDeploy/
-├─ backend/
-│  ├─ package.json
-│  ├─ index.js              # Express API + SSE progress + deploy engines
-│  ├─ deploy.js             # SFTP/FTPS upload logic
-│  ├─ git.js                # changed/staged file discovery
-│  ├─ store.js              # JSON storage for targets & manifests
-│  └─ .env.example          # optional envs (PORT, etc.)
-│
-├─ frontend/
-│  ├─ package.json
-│  ├─ index.html
-│  ├─ vite.config.js
-│  └─ src/
-│     ├─ main.jsx
-│     ├─ App.jsx
-│     ├─ api.js            # small fetch helpers
-│     └─ styles.css
-│
-├─ package.json             # root with scripts to run both
-└─ README.md
-```
-
----
-
-## Docker
-
-Build the Docker image:
-
-```bash
-docker build -t twindeploy .
-```
-
-Run the Docker container:
-
-```bash
-docker run --name twindeploy -p 9547:9547 twindeploy
-```
-
-Run the Docker container in detached mode:
-
-```bash
-docker run -d --name twindeploy -p 9547:9547 twindeploy
-```
-
-> Note: The container serves both the API and static frontend on port **9547**. Open <http://localhost:9547> to access the app (no separate 5173 port required).
-
-## Quick start
-
-```bash
-# 1) Install dependencies
-cd TwinDeploy/backend && npm i
-cd ../frontend && npm i
-cd .. && npm i
-
-# 2) Run (dev)
-npm run dev
-# Frontend on http://localhost:5173, backend on http://localhost:9547
-```
-
-> Tip: The app **does not move or clone your repo**. You point it at an existing repo path on your Mac. It reads diffs and streams files from disk when deploying.
-
----
-
-## Usage
-
-1. **Set Repository Path**: Enter the absolute path to your Git repository
-2. **Choose Mode**: Select either "Changed since" (with base ref) or "Staged" files
-3. **Scan**: Click "Scan" to detect files
-4. **Select Files**: Use checkboxes to choose which files to deploy
-5. **Add Target**: Create SFTP/FTPS deployment targets with connection details
-6. **Deploy**: Select a target and deploy your chosen files
-7. **Replay**: Use the History section to replay previous deployments to different targets
-
----
-
-## Configuration
-
-### Environment Variables
-
-Copy `backend/.env.example` to `backend/.env` and modify as needed:
-
-```bash
-# Backend port
-PORT=9547
-```
-
-### Target Setup
-
-When adding a new target, you'll need:
-
-* **Name**: A friendly name (e.g., "dev", "staging")
-* **Protocol**: Either "sftp" or "ftps"
-* **Host**: Server hostname or IP
-* **User**: Username for authentication
-* **Remote Root**: Base directory on the remote server
-* **Private Key**: Path to SSH key (for SFTP) or leave blank for password
-* **Password**: Password authentication (if not using key)
-
----
-
-## API Endpoints
-
-### Repository
-
-* `GET /api/repo/changed?repoPath=...&baseRef=...` - Get changed files
-
-* `GET /api/repo/staged?repoPath=...` - Get staged files
-
-### Targets
-
-* `GET /api/targets` - List all targets
-
-* `POST /api/targets` - Create new target
-* `PUT /api/targets/:id` - Update target
-* `DELETE /api/targets/:id` - Delete target
-
-### Deployment
-
-* `POST /api/deploy` - Deploy files (returns SSE stream)
-
-* `POST /api/replay` - Replay manifest (returns SSE stream)
-* `GET /api/manifests` - List deployment history
-
----
-
-## Development
-
-```bash
-# Install dependencies
-npm install
-
-# Run in development mode (both frontend and backend)
-npm run dev
-
-# Backend only
-cd backend && npm run dev
-
-# Frontend only
-cd frontend && npm run dev
-```
-
-The frontend will be available at `http://localhost:5173` and will proxy API requests to the backend at `http://localhost:8080`.
-
----
-
-## Security Notes
-
-* This app runs locally and is intended for development use
-* SSH keys and passwords are stored in local JSON files
-* Ensure your deployment targets are properly secured
-* Consider using SSH key authentication instead of passwords when possible
-
----
-
-## Troubleshooting
+## 🐛 Troubleshooting
 
 ### Common Issues
 
-1. **"Repository not found"**: Ensure the repository path is absolute and points to a valid Git repository
-2. **SFTP connection failed**: Check hostname, username, and SSH key path
-3. **Permission denied**: Ensure the remote user has write permissions to the target directory
-4. **Port conflicts**: Change the PORT in backend/.env if 8080 is already in use
+#### Repository not found
 
-### Logs
+- Ensure the repository path is absolute and points to a valid Git repository
 
-Check the browser console and terminal output for detailed error messages. The app includes a built-in log panel for deployment progress and errors.
+#### SFTP connection failed
+
+- Check hostname, username, and SSH key path
+- Verify SSH key permissions (`chmod 600 ~/.ssh/id_rsa`)
+
+#### Permission denied
+
+- Ensure the remote user has write permissions to the target directory
+
+#### Port conflicts
+
+- Change the PORT in `backend/.env` if 9547 is already in use
+
+### Getting Help
+
+- Check the browser console for detailed error messages
+- Review the built-in log panel for deployment progress
+- Open an issue if you encounter bugs or need features
+
+## 🔐 Security Notes
+
+- **Local Only**: Designed to run locally, not as a public service
+- **Credential Storage**: Connection details stored in local JSON files
+- **No Authentication**: Add authentication before deploying publicly
+- **SSH Keys**: Supports SSH key authentication for SFTP
+
+## 🤝 Contributing
+
+Contributions are welcome! Here's how to get started:
+
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
+4. **Push** to the branch (`git push origin feature/amazing-feature`)
+5. **Open** a Pull Request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-## License
+## ⭐ Show Your Support
 
-MIT License - feel free to modify and distribute as needed.
+Give a ⭐️ if this project helped you streamline your deployment workflow!
+
+---
+
+## Made with ❤️ for developers who want better deployment control especially for WordPress sites
