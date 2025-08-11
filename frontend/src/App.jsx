@@ -543,6 +543,20 @@ export default function App(){
               </div>
             )}
           </div>
+
+          {/* Deploy Section */}
+          <div className="deploy-section">
+            <h4>Deploy</h4>
+            <div className="row wrap">
+              <button
+                className="btn primary"
+                onClick={deploy}
+                disabled={!targetId||selectedFiles.length===0}
+              >
+                Deploy {selectedFiles.length > 0 ? `${selectedFiles.length} file${selectedFiles.length === 1 ? '' : 's'}` : 'selected'}
+              </button>
+            </div>
+          </div>
         </section>
 
         <section className="panel">
@@ -588,7 +602,7 @@ export default function App(){
           </div>
         </section>
 
-        <section className="panel">
+        <section className="panel remote-panel">
           <h3>4) Choose Remote Repository root path</h3>
           <div className="row tight">
             <button className="btn" onClick={toggleRemoteBrowser} disabled={!targetId}>{showRemoteBrowser ? 'Hide Browser' : 'Browse Remote'}</button>
@@ -693,21 +707,8 @@ export default function App(){
           )}
         </section>
 
-        <section className="panel">
-          <h3>5) Deploy</h3>
-          <div className="row wrap">
-            <button
-              className="btn primary"
-              onClick={deploy}
-              disabled={!targetId||selectedFiles.length===0}
-            >
-              Deploy {selectedFiles.length > 0 ? `${selectedFiles.length} file${selectedFiles.length === 1 ? '' : 's'}` : 'selected'}
-            </button>
-          </div>
-        </section>
-
         <section className="panel wide">
-          <h3>6) Log</h3>
+          <h3>5) Log</h3>
           <div className="log">
             {log.slice(-40).map((msg,i)=> <div key={i}>{msg}</div>)}
           </div>

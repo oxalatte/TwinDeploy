@@ -118,6 +118,25 @@ body { background:var(--bg); color:var(--text); line-height:1.4; }
   width: 100%;
 }
 
+/* Make the Remote Repository panel (section 4) expand horizontally */
+.remote-panel {
+  grid-column: 2 / -1;
+  width: 100%;
+}
+
+/* Deploy section styling within file queue */
+.deploy-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.deploy-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: var(--text);
+}
+
 .panel h3 {
   margin:0 0 10px;
   font-size:15px;
