@@ -24,6 +24,7 @@
 - 📁 **Remote Browser**: Browse and edit files directly on remote servers
 - 📝 **Deployment History**: Track all deployments with timestamps and results
 - 🌙 **Dark Mode**: Modern interface with light/dark theme support
+- 🐳 **Docker Support**: Easy containerized deployment with Docker Compose
 
 ## 🛠 Tech Stack
 
@@ -34,6 +35,8 @@
 - **Storage**: JSON files (SQLite migration planned)
 
 ## 🚀 Quick Start
+
+### Option 1: Local Development
 
 ```bash
 # 1) Clone and install dependencies
@@ -52,6 +55,62 @@ cd .. && npm run dev
 
 # Open http://localhost:5173 in your browser
 ```
+
+### Option 2: Docker (Recommended)
+
+#### Using Docker Compose (Easiest)
+
+```bash
+# 1) Clone the repository
+git clone git@github.com:ShirleyKyeyune/TwinDeploy.git
+cd TwinDeploy
+
+# 2) Start with Docker Compose (detached mode)
+docker-compose up -d
+
+# Alternative: Build and run in detached mode
+docker-compose up --build -d
+
+# View logs (optional)
+docker-compose logs -f
+
+# Stop the application
+docker-compose down
+
+# Open http://localhost:5173 in your browser
+```
+
+#### Using Docker CLI (Manual)
+
+```bash
+# 1) Clone the repository
+git clone git@github.com:ShirleyKyeyune/TwinDeploy.git
+cd TwinDeploy
+
+# 2) Build the Docker image
+docker build -t twindeploy .
+
+# 3) Run the container in detached mode
+docker run -d --name twindeploy -p 9547:9547 twindeploy
+
+# View logs (optional)
+docker logs -f twindeploy
+
+# Stop and remove the container
+docker stop twindeploy
+docker rm twindeploy
+
+# Open http://localhost:9547 in your browser
+```
+
+**Docker Benefits:**
+
+- ✅ No Node.js installation required
+- ✅ Consistent environment across systems
+- ✅ Easy updates with `docker-compose pull`
+- ✅ Production-ready configuration
+- ✅ Runs in background (detached mode)
+- ✅ Force rebuild with `--build` flag
 
 > 💡 **Note**: TwinDeploy doesn't move or clone your repositories. You point it at existing local Git repos and it reads diffs and streams files during deployment.
 
