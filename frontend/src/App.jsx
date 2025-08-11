@@ -39,6 +39,7 @@ function formatFileSize(bytes) {
 }
 
 export default function App(){
+  const version = "1.0.0"; // TwinDeploy version
   const [repoPath,setRepoPath] = useState('');
   const [mode,setMode] = useState('staged'); // 'changed' | 'staged'
   const [baseRef,setBaseRef] = useState('HEAD~1');
@@ -393,9 +394,11 @@ export default function App(){
       <header className="app-header">
         <img src="/app_logo.png" alt="TwinDeploy logo" className="app-logo" />
         <h1>TwinDeploy</h1>
-        <p>Selective Git file deployment & replay to other targets</p>
+        <p>Selective Git file deployment & replay to other targets via FTP</p>
         <div className="header-actions">
-          <button className="btn" onClick={()=>setDark(d=>!d)}>{dark?'Light':'Dark'} mode</button>
+          <button className="btn" onClick={()=>setDark(d=>!d)}>
+            {dark ? '☀️ Light' : '🌙 Dark'} mode
+          </button>
         </div>
       </header>
 
@@ -775,6 +778,11 @@ export default function App(){
           </div>
         </div>
       )}
+
+      <footer className="App-footer">
+        <p>Version: {version}</p>
+        <p>Developed by Shirley Godfrey Kyeyune</p>
+      </footer>
     </div>
   );
 }
