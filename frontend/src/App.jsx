@@ -84,7 +84,7 @@ export default function App(){
   function toggleAll(v){ const m={}; diff.forEach(x=>m[x.path]=v); setSel(m); }
 
   // Target form state (FileZilla style)
-  const emptyTarget = { name:'', protocol:'ftps', host:'', port:'21', user:'', password:'', key:'', remoteRoot:'', ignoreCertErrors: true };
+  const emptyTarget = { name:'', protocol:'ftps', host:'', port:'21', user:'', password:'', key:'', remoteRoot:'/', ignoreCertErrors: true };
   const [editing,setEditing] = useState(null); // existing target id or null
   const [tForm,setTForm] = useState(emptyTarget);
   const [tBusy,setTBusy] = useState(false);
@@ -400,8 +400,156 @@ export default function App(){
       </header>
 
       <div className="grid">
+        <section className="panel">
+          <h3>1) Remote Targets</h3>
+          <div className="target-form">
+            <div className="row tight wrap">
+              <input placeholder="Name" value={tForm.name} onChange={e=>changeT('name',e.target.value)} style={{flex:'1 1 120px'}} />
+              <select value={tForm.protocol} onChange={e=>changeT('protocol',e.target.value)}>
+                <option value="ftps">ftps</option>
+                <option value="sftp">sftp</option>
+              </select>
+              <input placeholder="Host" value={tForm.host} onChange={e=>changeT('host',e.target.value)} style={{flex:'1 1 160px'}} />
+              <input placeholder={tForm.protocol === 'sftp' ? 'Port (22)' : 'Port (21)'} value={tForm.port} onChange={e=>changeT('port',e.target.value.replace(/[^0-9]/g,''))} style={{width:70}} />
+              <input placeholder="User" value={tForm.user} onChange={e=>changeT('user',e.target.value)} style={{flex:'1 1 120px'}} />
+              {tForm.protocol==='sftp' && <input placeholder="Key path (optional)" value={tForm.key} onChange={e=>changeT('key',e.target.value)} style={{flex:'2 1 200px'}} />}
+              <input type="password" placeholder="Password" value={tForm.password} onChange={e=>changeT('password',e.target.value)} style={{flex:'1 1 140px'}} />
+              <input placeholder="Remote root (optional)" value={tForm.remoteRoot} onChange={e=>changeT('remoteRoot',e.target.value)} style={{flex:'2 1 200px'}} />
+            </div>
+            <div className="row tight">
+              {tForm.protocol === 'ftps' && (
+                <label className="checkbox">
+                  <input type="checkbox" checked={!!tForm.ignoreCertErrors} onChange={e => changeT('ignoreCertErrors', e.target.checked)} />
+                  <span>Trust all certificates (fixes hostname mismatch errors)</span>
+                </label>
+              )}
+            </div>
+            <div className="row tight">
+              <button className="btn sm" disabled={tBusy} onClick={handleTest}>Test</button>
+              <button className="btn sm primary" disabled={tBusy || !tForm.host} onClick={handleSave}>{editing?'Update':'Create'}</button>
+              <button className="btn sm" disabled={tBusy} onClick={startNewTarget}>New</button>
+              {editing && <button className="btn sm" disabled={tBusy} onClick={()=>handleDelete(editing)}>Delete</button>}
+              <span className="tmsg mono" style={{marginLeft:'auto'}}>{tMsg}</span>
+            </div>
+          </div>
+          <div className="list compact">
+            {targets.map(t=> (
+              <div key={t.id} className={`target-item selectable ${t.id===targetId?'active':''}`} onClick={()=>{ setTargetId(t.id); startEditTarget(t); }}>
+                <strong>{t.name||t.host}</strong> <code>{t.protocol}</code>
+                <span className="id">#{t.id.slice(0,8)}</span>
+              </div>
+            ))}
+            {targets.length===0 && <div className="empty">No targets yet.</div>}
+          </div>
+        </section>
+
+        <section className="panel remote-panel">
+          <h3>2) Choose Remote Repository root path</h3>
+          <div className="row tight">
+            <button className="btn" onClick={toggleRemoteBrowser} disabled={!targetId}>{showRemoteBrowser ? 'Hide Browser' : 'Browse Remote'}</button>
+            {targetId && (
+              <>
+                {connectionStatus === 'disconnected' && (
+                  <button className="btn primary" onClick={handleConnect}>Connect</button>
+                )}
+                {connectionStatus === 'connected' && (
+                  <button className="btn danger" onClick={handleDisconnect}>Disconnect</button>
+                )}
+                {['connecting', 'disconnecting'].includes(connectionStatus) && (
+                  <button className="btn" disabled>{connectionStatus === 'connecting' ? 'Connecting...' : 'Disconnecting...'}</button>
+                )}
+                <div className={`connection-status ${connectionStatus}`}>
+                  {connectionStatus === 'connected' ? 'Connected' :
+                   connectionStatus === 'disconnected' ? 'Disconnected' :
+                   connectionStatus === 'connecting' ? 'Connecting...' : 'Disconnecting...'}
+                </div>
+              </>
+            )}
+          </div>
+          {connectionError && <div className="connection-error">{connectionError}</div>}
+          {showRemoteBrowser && (
+            <div className="remote-browser">
+              <div className="remote-path-bar">
+                <button
+                  className="btn sm"
+                  onClick={handleRemoteParentDir}
+                  disabled={remotePath === '/' || remoteBusy || connectionStatus !== 'connected'}
+                  title="Go to parent directory"
+                >
+                  ⬆️ Up
+                </button>
+                <div className="current-path mono">{remotePath}</div>
+                <button
+                  className="btn sm"
+                  onClick={() => browseRemoteDir(remotePath)}
+                  disabled={remoteBusy || connectionStatus !== 'connected'}
+                  title="Refresh current directory"
+                >
+                  🔄 Refresh
+                </button>
+              </div>
+              <div className="remote-items">
+                {remoteBusy ? (
+                  <div className="loading">Loading...</div>
+                ) : connectionStatus !== 'connected' ? (
+                  <div className="empty">Connect to server to browse files</div>
+                ) : (
+                  <>
+                    {/* Add parent directory (..) entry if not at root */}
+                    {remotePath !== '/' && (
+                      <div
+                        key=".."
+                        className="remote-item folder parent-dir"
+                        onClick={handleRemoteParentDir}
+                      >
+                        <div className="remote-icon">📁</div>
+                        <div className="remote-name">..</div>
+                        <div className="remote-size"></div>
+                      </div>
+                    )}
+
+                    {/* Regular directory and file items */}
+                    {remoteItems.length === 0 ? (
+                      <div className="empty">Empty directory</div>
+                    ) : (
+                      remoteItems.map(item => (
+                        <div
+                          key={item.path}
+                          className={`remote-item ${item.type === 'd' ? 'folder' : 'file'}`}
+                        >
+                          <div className="remote-icon">{item.type === 'd' ? '📁' : '📄'}</div>
+                          <div className="remote-name" onClick={() => handleNavigateRemote(item)}>{item.name}</div>
+                          <div className="remote-size">{item.type !== 'd' ? formatFileSize(item.size) : ''}</div>
+                          {item.type !== 'd' && (
+                            <div className="remote-actions">
+                              <button
+                                className="btn sm"
+                                onClick={(e) => { e.stopPropagation(); handleDownloadFile(item); }}
+                                title="Download file"
+                              >
+                                ⬇️
+                              </button>
+                              <button
+                                className="btn sm"
+                                onClick={(e) => { e.stopPropagation(); handleEditFile(item); }}
+                                title="Edit file"
+                              >
+                                ✏️
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+
         <section className="panel accent">
-          <h3>1) Repository</h3>
+          <h3>3) Local Repository</h3>
           <div className="row tight">
             <input value={repoPath} onChange={e=>setRepoPath(e.target.value)} placeholder="/absolute/path/to/repo" style={{flex:1}} />
           </div>
@@ -415,7 +563,7 @@ export default function App(){
         </section>
 
         <section className="panel files-panel">
-          <h3>2) Files <span className="badge">{selectedFiles.length}/{diff.length}</span></h3>
+          <h3>4) Files <span className="badge">{selectedFiles.length}/{diff.length}</span></h3>
           <div className="toolbar">
             <button className="btn sm" onClick={()=>toggleAll(true)}>All</button>
             <button className="btn sm" onClick={()=>toggleAll(false)}>None</button>
@@ -547,6 +695,26 @@ export default function App(){
           {/* Deploy Section */}
           <div className="deploy-section">
             <h4>Deploy</h4>
+
+            {/* Display current deployment target */}
+            {targetId && (
+              <div className="deployment-target-info">
+                <div className="target-display">
+                  <strong>Target:</strong> {(() => {
+                    const selectedTarget = targets.find(t => t.id === targetId);
+                    if (!selectedTarget) return 'No target selected';
+
+                    let deploymentRoot = remotePath || '/';
+                    if (!showRemoteBrowser && selectedTarget?.remoteRoot && selectedTarget.remoteRoot.trim()) {
+                      deploymentRoot = selectedTarget.remoteRoot;
+                    }
+
+                    return `${selectedTarget.name || selectedTarget.host} (${selectedTarget.protocol.toUpperCase()}) → ${deploymentRoot}`;
+                  })()}
+                </div>
+              </div>
+            )}
+
             <div className="row wrap">
               <button
                 className="btn primary"
@@ -559,158 +727,10 @@ export default function App(){
           </div>
         </section>
 
-        <section className="panel">
-          <h3>3) Targets</h3>
-          <div className="target-form">
-            <div className="row tight wrap">
-              <input placeholder="Name" value={tForm.name} onChange={e=>changeT('name',e.target.value)} style={{flex:'1 1 120px'}} />
-              <select value={tForm.protocol} onChange={e=>changeT('protocol',e.target.value)}>
-                <option value="ftps">ftps</option>
-                <option value="sftp">sftp</option>
-              </select>
-              <input placeholder="Host" value={tForm.host} onChange={e=>changeT('host',e.target.value)} style={{flex:'1 1 160px'}} />
-              <input placeholder={tForm.protocol === 'sftp' ? 'Port (22)' : 'Port (21)'} value={tForm.port} onChange={e=>changeT('port',e.target.value.replace(/[^0-9]/g,''))} style={{width:70}} />
-              <input placeholder="User" value={tForm.user} onChange={e=>changeT('user',e.target.value)} style={{flex:'1 1 120px'}} />
-              {tForm.protocol==='sftp' && <input placeholder="Key path (optional)" value={tForm.key} onChange={e=>changeT('key',e.target.value)} style={{flex:'2 1 200px'}} />}
-              <input type="password" placeholder="Password" value={tForm.password} onChange={e=>changeT('password',e.target.value)} style={{flex:'1 1 140px'}} />
-              <input placeholder="Remote root (optional)" value={tForm.remoteRoot} onChange={e=>changeT('remoteRoot',e.target.value)} style={{flex:'2 1 200px'}} />
-            </div>
-            <div className="row tight">
-              {tForm.protocol === 'ftps' && (
-                <label className="checkbox">
-                  <input type="checkbox" checked={!!tForm.ignoreCertErrors} onChange={e => changeT('ignoreCertErrors', e.target.checked)} />
-                  <span>Trust all certificates (fixes hostname mismatch errors)</span>
-                </label>
-              )}
-            </div>
-            <div className="row tight">
-              <button className="btn sm" disabled={tBusy} onClick={handleTest}>Test</button>
-              <button className="btn sm primary" disabled={tBusy || !tForm.host} onClick={handleSave}>{editing?'Update':'Create'}</button>
-              <button className="btn sm" disabled={tBusy} onClick={startNewTarget}>New</button>
-              {editing && <button className="btn sm" disabled={tBusy} onClick={()=>handleDelete(editing)}>Delete</button>}
-              <span className="tmsg mono" style={{marginLeft:'auto'}}>{tMsg}</span>
-            </div>
-          </div>
-          <div className="list compact">
-            {targets.map(t=> (
-              <div key={t.id} className={`target-item selectable ${t.id===targetId?'active':''}`} onClick={()=>{ setTargetId(t.id); startEditTarget(t); }}>
-                <strong>{t.name||t.host}</strong> <code>{t.protocol}</code>
-                <span className="id">#{t.id.slice(0,8)}</span>
-              </div>
-            ))}
-            {targets.length===0 && <div className="empty">No targets yet.</div>}
-          </div>
-        </section>
-
-        <section className="panel remote-panel">
-          <h3>4) Choose Remote Repository root path</h3>
-          <div className="row tight">
-            <button className="btn" onClick={toggleRemoteBrowser} disabled={!targetId}>{showRemoteBrowser ? 'Hide Browser' : 'Browse Remote'}</button>
-            {targetId && (
-              <>
-                {connectionStatus === 'disconnected' && (
-                  <button className="btn primary" onClick={handleConnect}>Connect</button>
-                )}
-                {connectionStatus === 'connected' && (
-                  <button className="btn danger" onClick={handleDisconnect}>Disconnect</button>
-                )}
-                {['connecting', 'disconnecting'].includes(connectionStatus) && (
-                  <button className="btn" disabled>{connectionStatus === 'connecting' ? 'Connecting...' : 'Disconnecting...'}</button>
-                )}
-                <div className={`connection-status ${connectionStatus}`}>
-                  {connectionStatus === 'connected' ? 'Connected' :
-                   connectionStatus === 'disconnected' ? 'Disconnected' :
-                   connectionStatus === 'connecting' ? 'Connecting...' : 'Disconnecting...'}
-                </div>
-              </>
-            )}
-          </div>
-          {connectionError && <div className="connection-error">{connectionError}</div>}
-          {showRemoteBrowser && (
-            <div className="remote-browser">
-              <div className="remote-path-bar">
-                <button
-                  className="btn sm"
-                  onClick={handleRemoteParentDir}
-                  disabled={remotePath === '/' || remoteBusy || connectionStatus !== 'connected'}
-                  title="Go to parent directory"
-                >
-                  ⬆️ Up
-                </button>
-                <div className="current-path mono">{remotePath}</div>
-                <button
-                  className="btn sm"
-                  onClick={() => browseRemoteDir(remotePath)}
-                  disabled={remoteBusy || connectionStatus !== 'connected'}
-                  title="Refresh current directory"
-                >
-                  🔄 Refresh
-                </button>
-              </div>
-              <div className="remote-items">
-                {remoteBusy ? (
-                  <div className="loading">Loading...</div>
-                ) : connectionStatus !== 'connected' ? (
-                  <div className="empty">Connect to server to browse files</div>
-                ) : (
-                  <>
-                    {/* Add parent directory (..) entry if not at root */}
-                    {remotePath !== '/' && (
-                      <div
-                        key=".."
-                        className="remote-item folder parent-dir"
-                        onClick={handleRemoteParentDir}
-                      >
-                        <div className="remote-icon">📁</div>
-                        <div className="remote-name">..</div>
-                        <div className="remote-size"></div>
-                      </div>
-                    )}
-
-                    {/* Regular directory and file items */}
-                    {remoteItems.length === 0 ? (
-                      <div className="empty">Empty directory</div>
-                    ) : (
-                      remoteItems.map(item => (
-                        <div
-                          key={item.path}
-                          className={`remote-item ${item.type === 'd' ? 'folder' : 'file'}`}
-                        >
-                          <div className="remote-icon">{item.type === 'd' ? '📁' : '📄'}</div>
-                          <div className="remote-name" onClick={() => handleNavigateRemote(item)}>{item.name}</div>
-                          <div className="remote-size">{item.type !== 'd' ? formatFileSize(item.size) : ''}</div>
-                          {item.type !== 'd' && (
-                            <div className="remote-actions">
-                              <button
-                                className="btn sm"
-                                onClick={(e) => { e.stopPropagation(); handleDownloadFile(item); }}
-                                title="Download file"
-                              >
-                                ⬇️
-                              </button>
-                              <button
-                                className="btn sm"
-                                onClick={(e) => { e.stopPropagation(); handleEditFile(item); }}
-                                title="Edit file"
-                              >
-                                ✏️
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-        </section>
-
         <section className="panel wide">
           <h3>5) Log</h3>
           <div className="log">
-            {log.slice(-40).map((msg,i)=> <div key={i}>{msg}</div>)}
+            {log.map((msg,i)=> <div key={i}>{msg}</div>)}
           </div>
           <div className="row tight">
             <button className="btn sm" onClick={()=>setLog([])}>Clear</button>

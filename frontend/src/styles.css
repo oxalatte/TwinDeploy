@@ -11,9 +11,10 @@ body {
 }
 
 .wrap {
-  max-width: 1200px;
+  max-width: min(95vw, 1600px);
   margin: 0 auto;
   padding: 20px;
+  width: 100%;
 }
 
 header {
@@ -158,6 +159,7 @@ body { background:var(--bg); color:var(--text); line-height:1.4; }
   align-items:center;
   gap:10px;
   flex-wrap:wrap;
+  margin: 10px 0;
 }
 .row.tight { gap:6px; }
 .row.space { justify-content:space-between; width:100%; }
