@@ -110,6 +110,14 @@ body { background:var(--bg); color:var(--text); line-height:1.4; }
 .panel.wide {
   grid-column:1/-1;
 }
+/* Make the Files panel (section 2) expand horizontally by spanning two columns */
+.files-panel {
+  /* Span from column 2 to the last column */
+  grid-column: 2 / -1;
+  /* Ensure it uses available space */
+  width: 100%;
+}
+
 .panel h3 {
   margin:0 0 10px;
   font-size:15px;

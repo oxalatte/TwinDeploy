@@ -414,7 +414,7 @@ export default function App(){
           <div className="hint">{repoPath? 'Repo path set.' : 'Enter the absolute path to your Git repository.'}</div>
         </section>
 
-        <section className="panel">
+        <section className="panel files-panel">
           <h3>2) Files <span className="badge">{selectedFiles.length}/{diff.length}</span></h3>
           <div className="toolbar">
             <button className="btn sm" onClick={()=>toggleAll(true)}>All</button>
